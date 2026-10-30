@@ -1,81 +1,91 @@
+**English** | [简体中文](README.zh.md)
+
 # LangChain RAG Customer Assistant
 
-基于 LangChain 与 Milvus 的客服知识库学习案例。使用本地 `knowledge.txt` 构建向量知识库，通过硅基流动嵌入模型检索相关片段，再将问题和上下文交给聊天模型生成回答。
+A focused customer-support knowledge-base exercise built with LangChain and Milvus. A single Jupyter notebook turns the local `knowledge.txt` into searchable vectors, retrieves relevant passages with SiliconFlow embeddings, and passes the question and context to a chat agent.
 
-本仓库整理自用户提供的尚硅谷 LangChain 教程案例，仅包含客服知识库 Notebook、知识文本和完整依赖清单及运行文档。知识文本中的产品、套餐和退款规则用于示例演示，不作为实际服务承诺。
+This repository organizes a user-provided Atguigu LangChain tutorial example. It contains the notebook, knowledge text, original full dependency list, and setup notes. Product names, plans, and refund policies in the corpus are demonstration material, not real service commitments. This is a learning notebook, not a deployed support service.
 
-## 文件结构
+## What the notebook demonstrates
 
 ```text
-langchain-rag-customer-assistant/
-├── README.md
-├── LICENSE
-├── .gitignore
-├── .env.example
-├── knowledge.txt
-├── requirements_full.txt
-├── chapter10-RAG/
-│   └── 05-案例：Atguigu Assistant客服知识库.ipynb
-└── releases/
-    └── v0.1.0.md
+knowledge.txt → load and split → embed → Milvus
+user question → embed and search → retrieved context → chat agent answer
 ```
 
-## 环境准备
+The agent has no tools; retrieval happens explicitly in `generate_answer(query)` before the question and context are sent to it. The notebook prints retrieved chunks, source metadata, similarity scores, and the final answer.
 
-1. 使用 Python 3.13 环境，在仓库根目录安装依赖：
+## Repository contents
+
+- [Customer-support notebook](chapter10-RAG/05-案例：Atguigu%20Assistant客服知识库.ipynb): configuration, indexing, retrieval, and an example question.
+- [knowledge.txt](knowledge.txt): the Chinese demonstration corpus.
+- [requirements_full.txt](requirements_full.txt): dependency pins retained from the wider tutorial.
+- [.env.example](.env.example): placeholder API configuration.
+- [v0.1.0 notes](releases/v0.1.0.md): original cleanup and validation record.
+- [LICENSE](LICENSE): license for the added organization/documentation work, subject to the source-content attribution below.
+
+## Prepare the environment
+
+The original example uses Python 3.13. Create and activate an isolated environment, then install dependencies from the repository root:
 
 ```bash
+git clone https://github.com/Daredevil3210/langchain-rag-customer-assistant.git
+cd langchain-rag-customer-assistant
+python -m venv .venv
+# Activate: source .venv/bin/activate (macOS/Linux)
+# PowerShell: .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements_full.txt
 ```
 
-完整依赖清单保留了原教程的版本约束，也包含其他章节使用的组件，并非本案例的最小依赖集。本次发布未重新安装全部依赖进行兼容性验证。
+The full manifest includes components for other tutorial chapters and is not a minimal dependency set for this notebook. The original release notes state that the complete environment was not reinstalled for compatibility verification.
 
-2. 启动支持数据库操作的 Milvus 服务。Notebook 默认连接 `http://localhost:19530`；如果部署在其他地址，请修改 `MILVUS_URI`。
+Start a Milvus server supporting database operations. The default URI is `http://localhost:19530`; update `MILVUS_URI` in the notebook if needed. Installing pymilvus only installs the client, not the server.
 
-3. 复制配置模板，在本地填入自己的 API Key 和平台提供的 OpenAI 兼容接口地址：
+Copy `.env.example` to a local `.env` if no configuration exists. Use `cp .env.example .env` on macOS/Linux or `Copy-Item .env.example .env` in PowerShell. Fill in your own configuration:
 
-```bash
-cp .env.example .env
+```dotenv
+SILICONFLOW_API_KEY=your_siliconflow_api_key
+SILICONFLOW_BASE_URL=your_siliconflow_openai_compatible_base_url
+CLOSEAI_API_KEY=your_closeai_api_key
+CLOSEAI_BASE_URL=your_closeai_openai_compatible_base_url
 ```
 
-Windows PowerShell 可使用 `Copy-Item .env.example .env`。`.env` 已由 Git 忽略，真实凭据不包含在仓库中。
+SiliconFlow supplies `Pro/BAAI/bge-m3` embeddings. The chat model is initialized with `init_chat_model()` through the CLOSEAI OpenAI-compatible endpoint, with `gpt-5.4-mini` as the example model name. Use identifiers supported by your provider account. Hosted calls need network access and may incur charges. Keep credentials in the ignored local environment file.
 
-- `SILICONFLOW_API_KEY` / `SILICONFLOW_BASE_URL`：用于 `Pro/BAAI/bge-m3` 文本嵌入。
-- `CLOSEAI_API_KEY` / `CLOSEAI_BASE_URL`：用于通过 `init_chat_model()` 初始化聊天模型；示例模型名称为 `gpt-5.4-mini`，请按实际账号支持情况调整。
+## Run the example
 
-在线嵌入和聊天模型调用需要网络连接，并可能产生服务费用。
-
-## 运行案例
-
-从 Notebook 所在目录启动 Jupyter，确保 `../knowledge.txt` 能正确定位：
+Start Jupyter from the notebook directory so `../knowledge.txt` resolves:
 
 ```bash
 cd chapter10-RAG
 jupyter notebook
 ```
 
-打开客服知识库 Notebook，按单元格顺序运行：
+Open the customer-support notebook, select your environment as its kernel, and run cells in order:
 
-1. 配置 Milvus 地址、数据库、集合名称和知识文本路径。
-2. 创建数据库和集合，使用 1024 维向量及 `COSINE` 相似度。
-3. 初始化嵌入模型，加载知识文本并切分为文档块。
-4. 生成向量、写入 Milvus 并执行 flush。
-5. 初始化聊天模型和 Agent，将用户问题向量化并检索相关片段。
-6. 将问题与检索上下文传入 Agent，输出回答。
+1. Review the service URI, database/collection names, and knowledge-file path.
+2. Create the database and initialize a collection with 1024-dimensional COSINE vectors.
+3. Initialize embeddings, load the corpus, and split it with chunk size 200 and overlap 80.
+4. Generate vectors, upsert records with text/source/chunk IDs, then flush.
+5. Initialize the chat agent, embed a question, and retrieve relevant chunks.
+6. Send the question and context to the agent and inspect its answer.
 
-默认数据库为 `rag_tutorial`，集合为 `docs`。初始化集合的单元格会删除并重建同名集合，请仅在专用练习数据库中运行；已有数据需要保留时，应先修改数据库或集合名称。
+**Collection replacement:** initialization deletes and recreates the named collection. Defaults are database `rag_tutorial` and collection `docs`. Use a dedicated practice database or change the names before running if existing data must be preserved.
 
-## 整理与验证
+The example asks about a seven-day refund rejection. `generate_answer()` retrieves at most five passages; the standalone `retrieve()` helper defaults to three. Embedding dimensions must match the collection if you change models.
 
-- 修正 `generate_answer()` 中的参数，将实际问题 `query` 传入 `retrieve()`。
-- 清空 Notebook 历史输出和执行元数据，原始附件保留不变。
-- 将 `requirements_full.txt` 从 UTF-16 转为 UTF-8，保留依赖版本与说明。
-- 检查 Notebook 格式、代码语法、本地素材引用和发布文件中的常见敏感信息。
-- 使用模拟嵌入模型、Milvus 和 Agent 检查问题、检索结果与生成提示词的传递。
-- 未连接真实 Milvus 或调用在线模型进行端到端验证。
+## Existing cleanup and validation record
 
-首个版本的详细说明见 [v0.1.0 发布说明](releases/v0.1.0.md)。
+The [v0.1.0 notes](releases/v0.1.0.md) record these earlier changes:
 
-## 许可证与来源
+- Corrected `generate_answer()` to pass its actual `query` to `retrieve()`.
+- Cleared saved outputs and execution metadata while preserving notebook attachments.
+- Converted the dependency file from UTF-16 to UTF-8 without changing versions or comments.
+- Checked notebook format, code syntax, local asset references, and common sensitive-data patterns.
+- Used simulated embeddings, Milvus, and an agent to check question, retrieval, and prompt flow.
 
-本仓库新增的整理内容采用 [MIT License](LICENSE)。原教程代码与知识文本的权利归原权利人所有，第三方内容的使用和再分发仍须遵循其原有授权。
+That earlier validation did not connect to real Milvus or call online models end to end. No repository scripts, dependency installation, or online services were executed for this documentation refresh. The repository does not include a standalone automated test suite.
+
+## Attribution and license
+
+This example was organized from a user-provided Atguigu LangChain tutorial case. Added organization and documentation are licensed under [MIT](LICENSE). Rights to the original tutorial code and knowledge text remain with their respective owners; third-party use and redistribution remain subject to their original permissions.
